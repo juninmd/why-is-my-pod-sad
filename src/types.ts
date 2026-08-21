@@ -50,6 +50,7 @@ export interface Pod {
   metadata: {
     name: string;
     namespace: string;
+    labels?: Record<string, string>;
     deletionTimestamp?: string;
     finalizers?: string[];
     creationTimestamp?: string;

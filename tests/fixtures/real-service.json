@@ -1,0 +1,210 @@
+{
+  "service": {
+    "metadata": {
+      "name": "litellm",
+      "namespace": "ai"
+    },
+    "spec": {
+      "clusterIP": "10.43.159.1",
+      "clusterIPs": [
+        "10.43.159.1"
+      ],
+      "internalTrafficPolicy": "Cluster",
+      "ipFamilies": [
+        "IPv4"
+      ],
+      "ipFamilyPolicy": "SingleStack",
+      "ports": [
+        {
+          "name": "http",
+          "port": 4000,
+          "protocol": "TCP",
+          "targetPort": 4000
+        }
+      ],
+      "selector": {
+        "app": "litellm",
+        "app.kubernetes.io/managed-by": "argocd",
+        "app.kubernetes.io/name": "litellm",
+        "app.kubernetes.io/part-of": "ai-gateway"
+      },
+      "sessionAffinity": "None",
+      "type": "ClusterIP"
+    },
+    "status": {
+      "loadBalancer": {}
+    }
+  },
+  "endpointSlices": [
+    {
+      "addressType": "IPv4",
+      "apiVersion": "discovery.k8s.io/v1",
+      "endpoints": [
+        {
+          "addresses": [
+            "10.42.0.107"
+          ],
+          "conditions": {
+            "ready": true,
+            "serving": true,
+            "terminating": false
+          },
+          "nodeName": "junin-vm",
+          "targetRef": {
+            "kind": "Pod",
+            "name": "litellm-d97879bbb-2jkcj",
+            "namespace": "ai",
+            "uid": "8dc5d854-761a-4b18-a2ca-c013bec61427"
+          }
+        }
+      ],
+      "kind": "EndpointSlice",
+      "metadata": {
+        "name": "litellm-b4bzp",
+        "namespace": "ai"
+      },
+      "ports": [
+        {
+          "name": "http",
+          "port": 4000,
+          "protocol": "TCP"
+        }
+      ]
+    }
+  ],
+  "pods": [
+    {
+      "metadata": {
+        "name": "litellm-d97879bbb-2jkcj",
+        "namespace": "ai",
+        "labels": {
+          "app": "litellm",
+          "app.kubernetes.io/managed-by": "argocd",
+          "app.kubernetes.io/name": "litellm",
+          "app.kubernetes.io/part-of": "ai-gateway",
+          "pod-template-hash": "d97879bbb"
+        }
+      },
+      "spec": {
+        "nodeName": "junin-vm",
+        "containers": [
+          {
+            "name": "litellm",
+            "ports": [
+              {
+                "containerPort": 4000,
+                "name": "http",
+                "protocol": "TCP"
+              }
+            ]
+          }
+        ]
+      },
+      "status": {
+        "phase": "Running",
+        "containerStatuses": [
+          {
+            "name": "litellm",
+            "ready": true,
+            "restartCount": 0
+          }
+        ]
+      }
+    }
+  ],
+  "otherPods": [
+    {
+      "name": "outro-app-1",
+      "labels": {
+        "app": "outro-app-1"
+      }
+    },
+    {
+      "name": "outro-app-2",
+      "labels": {
+        "app": "outro-app-2"
+      }
+    },
+    {
+      "name": "outro-app-3",
+      "labels": {
+        "app": "outro-app-3"
+      }
+    },
+    {
+      "name": "outro-app-4",
+      "labels": {
+        "app": "outro-app-4"
+      }
+    },
+    {
+      "name": "outro-app-5",
+      "labels": {
+        "app": "outro-app-5"
+      }
+    },
+    {
+      "name": "outro-app-6",
+      "labels": {
+        "app": "outro-app-6"
+      }
+    }
+  ],
+  "ingresses": [
+    {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "Ingress",
+      "metadata": {
+        "name": "litellm-ingress",
+        "namespace": "ai"
+      },
+      "spec": {
+        "ingressClassName": "traefik",
+        "rules": [
+          {
+            "host": "litellm.exemplo.com",
+            "http": {
+              "paths": [
+                {
+                  "backend": {
+                    "service": {
+                      "name": "litellm",
+                      "port": {
+                        "number": 4000
+                      }
+                    }
+                  },
+                  "path": "/",
+                  "pathType": "Prefix"
+                }
+              ]
+            }
+          }
+        ],
+        "tls": [
+          {
+            "hosts": [
+              "litellm.exemplo.com"
+            ],
+            "secretName": "wildcard-tls"
+          }
+        ]
+      },
+      "status": {
+        "loadBalancer": {
+          "ingress": [
+            {
+              "ip": "172.40.1.247"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "secretNames": [
+    "registry-pull-secret",
+    "app-secret",
+    "wildcard-tls"
+  ],
+  "events": []
+}

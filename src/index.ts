@@ -1,8 +1,11 @@
 #!/usr/bin/env bun
 import { collect, listPods, resolvePod, sadness } from "./collect.ts";
 import { currentNamespace, KubectlError, type Target } from "./kubectl.ts";
-import { render, renderList } from "./render.ts";
+import { render, renderList, renderService } from "./render.ts";
 import { analyze } from "./rules.ts";
+import { collectService, resolveService } from "./service-collect.ts";
+import { analyzeService } from "./service-rules.ts";
+import type { ServiceSnapshot } from "./service-types.ts";
 import type { Pod, PodSnapshot } from "./types.ts";
 
 const HELP = `
@@ -11,6 +14,7 @@ why-is-my-pod-sad — diagnóstico de pod em uma tela só
   wimps                     escaneia o namespace e lista quem está triste
   wimps <pod>               diagnostica um pod (aceita prefixo do nome)
   wimps -l app=api          diagnostica o pod mais triste que bate no selector
+  wimps svc <service>       diagnostica Service + endpoints + Ingress que apontam pra ele
 
 opções:
   -n, --namespace <ns>      namespace (padrão: o do contexto atual)
@@ -27,6 +31,7 @@ exit: 0 saudável · 1 só avisos · 2 problema crítico · 3 erro de execução
 `;
 
 interface Args {
+  kind: "pod" | "service";
   query?: string;
   namespace?: string;
   context?: string;
@@ -41,6 +46,7 @@ interface Args {
 
 export function parseArgs(argv: string[]): Args {
   const a: Args = {
+    kind: "pod",
     allNamespaces: false,
     tail: 50,
     logs: true,
@@ -82,9 +88,14 @@ export function parseArgs(argv: string[]): Args {
       case "--json":
         a.json = true;
         break;
-      default:
+      default: {
         if (arg.startsWith("-")) throw new Error(`opção desconhecida: ${arg}`);
-        a.query ??= arg;
+        // `wimps svc foo` — o primeiro posicional pode ser o tipo do objeto.
+        const isKind = a.query === undefined && ["svc", "service"].includes(arg);
+        if (isKind) a.kind = "service";
+        else a.query ??= arg;
+        break;
+      }
     }
   }
   return a;
@@ -160,9 +171,18 @@ async function main(): Promise<number> {
   if (args.from) {
     const raw = JSON.parse(await Bun.file(args.from).text()) as
       | PodSnapshot
+      | ServiceSnapshot
       | Pod;
-    const snap: PodSnapshot =
-      "pod" in raw ? raw : { pod: raw as Pod, events: [], logs: {} };
+    // Aceita pod cru, snapshot de pod ou snapshot de Service.
+    if ("service" in raw) {
+      const findings = analyzeService(raw);
+      console.log(
+        args.json ? JSON.stringify({ findings }, null, 2) : renderService(raw, findings),
+      );
+      if (findings.some((f) => f.severity === "critical")) return 2;
+      return findings.some((f) => f.severity === "warn") ? 1 : 0;
+    }
+    const snap: PodSnapshot = "pod" in raw ? raw : { pod: raw as Pod, events: [], logs: {} };
     const findings = analyze(snap);
     console.log(args.json ? JSON.stringify({ findings }, null, 2) : render(snap, findings));
     if (findings.some((f) => f.severity === "critical")) return 2;
@@ -173,6 +193,18 @@ async function main(): Promise<number> {
     context: args.context,
     namespace: args.namespace ?? (await currentNamespace(args.context)),
   };
+
+  if (args.kind === "service") {
+    if (!args.query) throw new Error("informe o nome do Service: wimps svc <nome>");
+    const service = await resolveService(args.query, target);
+    const snap = await collectService(service, target);
+    const findings = analyzeService(snap);
+    console.log(
+      args.json ? JSON.stringify({ findings, snapshot: snap }, null, 2) : renderService(snap, findings),
+    );
+    if (findings.some((f) => f.severity === "critical")) return 2;
+    return findings.some((f) => f.severity === "warn") ? 1 : 0;
+  }
 
   if (!args.query && !args.selector) return scan(target, args);
 

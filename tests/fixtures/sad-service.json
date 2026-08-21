@@ -1,0 +1,43 @@
+{
+  "service": {
+    "metadata": { "name": "api", "namespace": "apps" },
+    "spec": {
+      "type": "ClusterIP",
+      "clusterIP": "10.43.9.12",
+      "selector": { "app": "api", "tier": "backend" },
+      "ports": [{ "name": "http", "port": 80 }]
+    },
+    "status": {}
+  },
+  "endpointSlices": [],
+  "pods": [],
+  "otherPods": [
+    { "name": "api-7d9dc8796-cd5l7", "labels": { "app": "api", "pod-template-hash": "7d9dc8796" } },
+    { "name": "worker-5f8b9c-xk2p9", "labels": { "app": "worker" } }
+  ],
+  "ingresses": [
+    {
+      "metadata": { "name": "api-ing", "namespace": "apps" },
+      "spec": {
+        "tls": [{ "hosts": ["api.exemplo.com"], "secretName": "api-tls" }],
+        "rules": [
+          {
+            "host": "api.exemplo.com",
+            "http": {
+              "paths": [
+                {
+                  "path": "/",
+                  "pathType": "Prefix",
+                  "backend": { "service": { "name": "api", "port": { "number": 3000 } } }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "status": { "loadBalancer": {} }
+    }
+  ],
+  "secretNames": ["outro-tls"],
+  "events": []
+}
