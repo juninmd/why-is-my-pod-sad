@@ -1,0 +1,19 @@
+{
+  "name": "why-is-my-pod-sad",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Diagnóstico de pod do Kubernetes em uma tela só: events + logs + probes + limits viram um veredito.",
+  "bin": {
+    "wimps": "src/index.ts"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0",
+    "typescript": "^5.7.3"
+  }
+}

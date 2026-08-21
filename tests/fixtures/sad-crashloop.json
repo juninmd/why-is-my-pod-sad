@@ -1,0 +1,57 @@
+{
+  "pod": {
+    "metadata": {
+      "name": "api-7d9dc8796-cd5l7",
+      "namespace": "apps",
+      "creationTimestamp": "2026-08-20T22:00:00Z"
+    },
+    "spec": {
+      "nodeName": "junin-vm",
+      "imagePullSecrets": [],
+      "containers": [
+        {
+          "name": "api",
+          "image": "ghcr.io/juninmd/api:1.4.2",
+          "ports": [{ "name": "http", "containerPort": 3000 }],
+          "resources": { "limits": { "memory": "128Mi" }, "requests": { "memory": "64Mi" } },
+          "livenessProbe": { "httpGet": { "port": 8080, "path": "/health" }, "initialDelaySeconds": 3 },
+          "readinessProbe": { "httpGet": { "port": "http", "path": "/ready" } }
+        }
+      ]
+    },
+    "status": {
+      "phase": "Running",
+      "containerStatuses": [
+        {
+          "name": "api",
+          "ready": false,
+          "restartCount": 7,
+          "image": "ghcr.io/juninmd/api:1.4.2",
+          "state": { "waiting": { "reason": "CrashLoopBackOff", "message": "back-off 5m0s restarting failed container" } },
+          "lastState": { "terminated": { "reason": "OOMKilled", "exitCode": 137, "finishedAt": "2026-08-20T23:58:11Z" } }
+        }
+      ]
+    }
+  },
+  "events": [
+    {
+      "type": "Warning",
+      "reason": "Unhealthy",
+      "message": "Liveness probe failed: Get \"http://10.42.0.31:8080/health\": dial tcp 10.42.0.31:8080: connect: connection refused",
+      "count": 12,
+      "lastTimestamp": "2026-08-20T23:58:00Z"
+    },
+    {
+      "type": "Warning",
+      "reason": "BackOff",
+      "message": "Back-off restarting failed container api in pod api-7d9dc8796-cd5l7_apps",
+      "count": 7,
+      "lastTimestamp": "2026-08-20T23:59:00Z"
+    }
+  ],
+  "logs": {
+    "api": {
+      "previous": "listening on :3000\nprocessing batch 1421\n<--- Last few GCs --->\nFATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory"
+    }
+  }
+}

@@ -1,0 +1,250 @@
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "creationTimestamp": "2026-08-08T14:06:26Z",
+    "generateName": "litellm-d97879bbb-",
+    "generation": 1,
+    "labels": {
+      "app": "litellm",
+      "app.kubernetes.io/managed-by": "argocd",
+      "app.kubernetes.io/name": "litellm",
+      "app.kubernetes.io/part-of": "ai-gateway",
+      "pod-template-hash": "d97879bbb"
+    },
+    "name": "litellm-d97879bbb-2jkcj",
+    "namespace": "ai",
+    "ownerReferences": [
+      {
+        "apiVersion": "apps/v1",
+        "blockOwnerDeletion": true,
+        "controller": true,
+        "kind": "ReplicaSet",
+        "name": "litellm-d97879bbb",
+        "uid": "5b36cf01-3f7f-4165-8a9c-0f321d06bc32"
+      }
+    ],
+    "resourceVersion": "21004567",
+    "uid": "8dc5d854-761a-4b18-a2ca-c013bec61427"
+  },
+  "spec": {
+    "containers": [
+      {
+        "args": [
+          "--config",
+          "/app/config.yaml",
+          "--host",
+          "0.0.0.0",
+          "--port",
+          "4000"
+        ],
+        "image": "ghcr.io/berriai/litellm-database:v1.95.0@sha256:af7ff0444278be40f7615764d1562ac557df6103cba052e886915a7e1e944c27",
+        "imagePullPolicy": "IfNotPresent",
+        "livenessProbe": {
+          "failureThreshold": 5,
+          "httpGet": {
+            "path": "/health/liveliness",
+            "port": 4000,
+            "scheme": "HTTP"
+          },
+          "initialDelaySeconds": 30,
+          "periodSeconds": 30,
+          "successThreshold": 1,
+          "timeoutSeconds": 5
+        },
+        "name": "litellm",
+        "ports": [
+          {
+            "containerPort": 4000,
+            "name": "http",
+            "protocol": "TCP"
+          }
+        ],
+        "readinessProbe": {
+          "failureThreshold": 12,
+          "httpGet": {
+            "path": "/health/readiness",
+            "port": 4000,
+            "scheme": "HTTP"
+          },
+          "initialDelaySeconds": 10,
+          "periodSeconds": 10,
+          "successThreshold": 1,
+          "timeoutSeconds": 5
+        },
+        "resources": {
+          "limits": {
+            "cpu": "2",
+            "memory": "3Gi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "1400Mi"
+          }
+        },
+        "startupProbe": {
+          "failureThreshold": 30,
+          "httpGet": {
+            "path": "/health/liveliness",
+            "port": 4000,
+            "scheme": "HTTP"
+          },
+          "initialDelaySeconds": 20,
+          "periodSeconds": 10,
+          "successThreshold": 1,
+          "timeoutSeconds": 5
+        },
+        "terminationMessagePath": "/dev/termination-log",
+        "terminationMessagePolicy": "File"
+      }
+    ],
+    "dnsPolicy": "ClusterFirst",
+    "enableServiceLinks": true,
+    "nodeName": "junin-vm",
+    "preemptionPolicy": "PreemptLowerPriority",
+    "priority": 1000,
+    "priorityClassName": "infra-critical",
+    "restartPolicy": "Always",
+    "schedulerName": "default-scheduler",
+    "securityContext": {},
+    "serviceAccount": "default",
+    "serviceAccountName": "default",
+    "terminationGracePeriodSeconds": 30
+  },
+  "status": {
+    "allocatedResources": {
+      "cpu": "100m",
+      "memory": "1400Mi"
+    },
+    "conditions": [
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2026-08-08T14:06:27Z",
+        "observedGeneration": 1,
+        "status": "True",
+        "type": "PodReadyToStartContainers"
+      },
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2026-08-08T14:06:26Z",
+        "observedGeneration": 1,
+        "status": "True",
+        "type": "Initialized"
+      },
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2026-08-08T14:40:51Z",
+        "observedGeneration": 1,
+        "status": "True",
+        "type": "Ready"
+      },
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2026-08-08T14:40:51Z",
+        "observedGeneration": 1,
+        "status": "True",
+        "type": "ContainersReady"
+      },
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2026-08-08T14:06:26Z",
+        "observedGeneration": 1,
+        "status": "True",
+        "type": "PodScheduled"
+      }
+    ],
+    "containerStatuses": [
+      {
+        "allocatedResources": {
+          "cpu": "100m",
+          "memory": "1400Mi"
+        },
+        "containerID": "containerd://2a5e5508d1d8866776091f2c12cea06dee6d4389d5354ce9dc15d969934a8671",
+        "image": "ghcr.io/berriai/litellm-database:v1.95.0",
+        "imageID": "ghcr.io/berriai/litellm-database@sha256:af7ff0444278be40f7615764d1562ac557df6103cba052e886915a7e1e944c27",
+        "lastState": {},
+        "name": "litellm",
+        "ready": true,
+        "resources": {
+          "limits": {
+            "cpu": "2",
+            "memory": "3Gi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "memory": "1400Mi"
+          }
+        },
+        "restartCount": 0,
+        "started": true,
+        "state": {
+          "running": {
+            "startedAt": "2026-08-08T14:06:27Z"
+          }
+        },
+        "user": {
+          "linux": {
+            "gid": 0,
+            "supplementalGroups": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              6,
+              10,
+              11,
+              20,
+              26,
+              27
+            ],
+            "uid": 0
+          }
+        },
+        "volumeMounts": [
+          {
+            "mountPath": "/app/config.yaml",
+            "name": "config",
+            "readOnly": true,
+            "recursiveReadOnly": "Disabled"
+          },
+          {
+            "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+            "name": "kube-api-access-4wwrw",
+            "readOnly": true,
+            "recursiveReadOnly": "Disabled"
+          }
+        ]
+      }
+    ],
+    "hostIP": "172.40.1.247",
+    "hostIPs": [
+      {
+        "ip": "172.40.1.247"
+      },
+      {
+        "ip": "2801:80:3ea0:c813::336"
+      }
+    ],
+    "observedGeneration": 1,
+    "phase": "Running",
+    "podIP": "10.42.0.107",
+    "podIPs": [
+      {
+        "ip": "10.42.0.107"
+      }
+    ],
+    "qosClass": "Burstable",
+    "resources": {
+      "limits": {
+        "cpu": "2",
+        "memory": "3Gi"
+      },
+      "requests": {
+        "cpu": "79m",
+        "memory": "1400Mi"
+      }
+    },
+    "startTime": "2026-08-08T14:06:26Z"
+  }
+}
