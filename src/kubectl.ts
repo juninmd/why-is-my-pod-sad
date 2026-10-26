@@ -12,8 +12,11 @@ export class KubectlError extends Error {
   }
 }
 
+/** Seconds before an unreachable cluster is reported instead of hanging. */
+const REQUEST_TIMEOUT_S = 15;
+
 function baseArgs(t: Target): string[] {
-  const args: string[] = [];
+  const args: string[] = [`--request-timeout=${REQUEST_TIMEOUT_S}s`];
   if (t.context) args.push("--context", t.context);
   if (t.namespace) args.push("-n", t.namespace);
   return args;
@@ -25,14 +28,28 @@ export async function kubectl(args: string[], t: Target = {}): Promise<string> {
   let proc: Bun.Subprocess<"ignore", "pipe", "pipe">;
   try {
     proc = Bun.spawn(["kubectl", ...full], { stdout: "pipe", stderr: "pipe" });
-  } catch {
-    throw new KubectlError("kubectl não encontrado no PATH", "");
+  } catch (e) {
+    const code = (e as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") throw new KubectlError("kubectl não encontrado no PATH", "");
+    throw new KubectlError(`não foi possível executar kubectl: ${(e as Error).message}`, "");
   }
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    proc.kill("SIGKILL");
+  }, (REQUEST_TIMEOUT_S + 5) * 1000);
   const [stdout, stderr, code] = await Promise.all([
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
     proc.exited,
   ]);
+  clearTimeout(timer);
+  if (timedOut) {
+    throw new KubectlError(
+      `kubectl demorou mais de ${REQUEST_TIMEOUT_S}s (cluster inalcançável?)`,
+      stderr.trim(),
+    );
+  }
   if (code !== 0) {
     throw new KubectlError(`kubectl ${full.join(" ")} falhou (exit ${code})`, stderr.trim());
   }

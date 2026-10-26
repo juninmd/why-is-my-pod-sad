@@ -55,7 +55,7 @@ export async function collectService(service: Service, t: Target): Promise<Servi
     kubectlJson<List<Ingress>>(["get", "ingresses"], scoped).catch(() => ({
       items: [] as Ingress[],
     })),
-    kubectlSoft(["get", "secrets", "-o", "jsonpath={.items[*].metadata.name}"], scoped),
+    kubectlSoft(["get", "secrets", "--no-headers"], scoped),
     kubectlJson<List<EventLite>>(
       ["get", "events", "--field-selector", `involvedObject.name=${name}`],
       scoped,
@@ -77,7 +77,10 @@ export async function collectService(service: Service, t: Target): Promise<Servi
       .filter((p) => !matchNames.has(p.metadata.name))
       .map((p) => ({ name: p.metadata.name, labels: p.metadata.labels ?? {} })),
     ingresses: ingressesFor(ingressList.items ?? [], name),
-    secretNames: (secretList ?? "").split(/\s+/).filter(Boolean),
+    secretNames: (secretList ?? "")
+      .split("\n")
+      .map((l) => l.trim().split(/\s+/)[0] ?? "")
+      .filter(Boolean),
     events: events.items ?? [],
   };
 }
