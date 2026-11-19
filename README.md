@@ -129,7 +129,7 @@ do cluster (`tests/fixtures/real-*.json`, com env e topologia removidos) que gar
 de falso positivo em pod saudável, em pod de Job que completou e em Service com Ingress no ar.
 
 ```bash
-bun test          # 52 testes
+bun test          # 57 testes
 bunx tsc --noEmit
 ```
 
