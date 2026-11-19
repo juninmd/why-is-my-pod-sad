@@ -178,7 +178,7 @@ export function analyze(snap: PodSnapshot): Finding[] {
     }
 
     // 4b. config error (secret/configmap faltando)
-    if (/CreateContainerConfigError|CreateContainerError|InvalidImageName/.test(reason)) {
+    if (/CreateContainerConfigError|CreateContainerError/.test(reason)) {
       const msg = waiting?.message ?? "";
       const missing = /(secret|configmap) "([^"]+)" not found/i.exec(msg);
       push({
