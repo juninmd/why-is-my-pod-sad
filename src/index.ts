@@ -55,7 +55,13 @@ export function parseArgs(argv: string[]): Args {
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] as string;
-    const next = () => argv[++i];
+    // Valor ausente ou outra flag no lugar dele: erro em vez de engolir `--json` como namespace.
+    const next = () => {
+      const v = argv[i + 1];
+      if (v === undefined || v.startsWith("-")) throw new Error(`a opção ${arg} exige um valor`);
+      i++;
+      return v;
+    };
     switch (arg) {
       case "-h":
       case "--help":
@@ -80,7 +86,10 @@ export function parseArgs(argv: string[]): Args {
         a.from = next();
         break;
       case "--tail":
-        a.tail = Number(next()) || 50;
+        a.tail = Number(next());
+        if (!Number.isInteger(a.tail) || a.tail < 1) {
+          throw new Error("--tail exige um inteiro maior que zero");
+        }
         break;
       case "--no-logs":
         a.logs = false;
@@ -223,14 +232,16 @@ async function main(): Promise<number> {
   return 0;
 }
 
-try {
-  process.exit(await main());
-} catch (err) {
-  if (err instanceof KubectlError) {
-    console.error(`\n  ✖ ${err.message}`);
-    if (err.stderr) console.error(`    ${err.stderr.split("\n")[0]}`);
-  } else {
-    console.error(`\n  ✖ ${(err as Error).message}`);
+if (import.meta.main) {
+  try {
+    process.exit(await main());
+  } catch (err) {
+    if (err instanceof KubectlError) {
+      console.error(`\n  ✖ ${err.message}`);
+      if (err.stderr) console.error(`    ${err.stderr.split("\n")[0]}`);
+    } else {
+      console.error(`\n  ✖ ${(err as Error).message}`);
+    }
+    process.exit(3);
   }
-  process.exit(3);
 }
