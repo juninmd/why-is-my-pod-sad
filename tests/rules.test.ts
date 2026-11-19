@@ -126,6 +126,24 @@ describe("imagem", () => {
     );
     expect(find(f, "image-pull")?.hint).toContain("não existe no registry");
   });
+
+  test("InvalidImageName is reported once, as image-pull", () => {
+    const f = analyze(
+      snapshot(
+        pod({
+          statuses: [
+            {
+              name: "app",
+              ready: false,
+              image: "App:Bad Tag",
+              state: { waiting: { reason: "InvalidImageName", message: "Failed to apply default image tag" } },
+            },
+          ],
+        }),
+      ),
+    );
+    expect(ids(f).filter((id) => id === "image-pull" || id === "config-error")).toEqual(["image-pull"]);
+  });
 });
 
 describe("crash", () => {
