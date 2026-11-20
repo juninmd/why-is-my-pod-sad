@@ -276,7 +276,10 @@ export function analyze(snap: PodSnapshot): Finding[] {
     }
 
     // 4h. readiness reprovando
-    const unhealthy = eventsMatching(events, /Unhealthy/);
+    // Probe events name their container; ones without it (older data) still apply to all.
+    const unhealthy = eventsMatching(events, /Unhealthy/).filter(
+      (e) => e.container === undefined || e.container === st.name,
+    );
     const readinessFail = unhealthy.filter((e) => /Readiness probe/.test(e.message ?? ""));
     if (st.ready === false && st.state?.running && readinessFail.length) {
       push({
