@@ -14,8 +14,13 @@ interface EventList {
     lastTimestamp?: string;
     firstTimestamp?: string;
     eventTime?: string;
+    involvedObject?: { fieldPath?: string };
   }[];
 }
+
+/** "spec.containers{app}" / "spec.initContainers{init}" -> "app" / "init". */
+export const containerOfFieldPath = (fieldPath: string | undefined): string | undefined =>
+  /^spec\.(?:init|ephemeral)?[cC]ontainers\{([^}]+)\}$/.exec(fieldPath ?? "")?.[1];
 
 /** Pods that are not plainly happy — used when no pod name is given. */
 export function sadness(pod: Pod): number {
@@ -120,6 +125,7 @@ async function fetchEvents(podName: string, t: Target): Promise<EventLite[]> {
       count: e.count,
       lastTimestamp: e.lastTimestamp ?? e.eventTime,
       firstTimestamp: e.firstTimestamp,
+      container: containerOfFieldPath(e.involvedObject?.fieldPath),
     }))
     .sort((a, b) => (a.lastTimestamp ?? "").localeCompare(b.lastTimestamp ?? ""));
 }

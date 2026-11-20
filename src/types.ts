@@ -82,6 +82,8 @@ export interface EventLite {
   count?: number;
   lastTimestamp?: string;
   firstTimestamp?: string;
+  /** Container the event is about (from involvedObject.fieldPath), when Kubernetes says. */
+  container?: string;
 }
 
 export interface ContainerLogs {

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { containerOfFieldPath } from "../src/collect.ts";
 import { analyze } from "../src/rules.ts";
-import type { Finding } from "../src/types.ts";
+import type { EventLite, Finding } from "../src/types.ts";
 import { event, ids, pod, snapshot } from "./helpers.ts";
 
 const find = (findings: Finding[], id: string) => findings.find((f) => f.id === id);
@@ -388,5 +389,56 @@ describe("ordenação", () => {
     );
     expect(f[0]?.severity).toBe("critical");
     expect(f.at(-1)?.severity).toBe("info");
+  });
+});
+
+describe("eventos de probe atribuídos ao container certo", () => {
+  const twoContainers = (readyApp: boolean) =>
+    pod({
+      containers: [
+        { name: "app", ports: [{ containerPort: 80 }], readinessProbe: { httpGet: { port: 80 } } },
+        { name: "sidecar", ports: [{ containerPort: 9090 }], readinessProbe: { httpGet: { port: 9090 } } },
+      ],
+      statuses: [
+        { name: "app", ready: readyApp, restartCount: 3, state: { running: { startedAt: "x" } } },
+        { name: "sidecar", ready: false, restartCount: 3, state: { running: { startedAt: "x" } } },
+      ],
+    });
+  const forContainer = (e: EventLite, container: string): EventLite => ({ ...e, container });
+
+  test("readiness do sidecar não acusa o app", () => {
+    const f = analyze(
+      snapshot(twoContainers(false), [
+        forContainer(event("Unhealthy", "Readiness probe failed: connection refused", 9), "sidecar"),
+      ]),
+    );
+    const titles = f.filter((x) => x.id === "readiness-failing").map((x) => x.title);
+    expect(titles).toEqual(['container "sidecar" está rodando mas nunca fica Ready']);
+  });
+
+  test("liveness do sidecar não acusa o app", () => {
+    const f = analyze(
+      snapshot(twoContainers(true), [
+        forContainer(event("Unhealthy", "Liveness probe failed: connection refused", 4), "sidecar"),
+      ]),
+    );
+    const titles = f.filter((x) => x.id === "liveness-kills").map((x) => x.title);
+    expect(titles).toEqual(['livenessProbe está matando o container "sidecar"']);
+  });
+
+  test("evento sem container conhecido continua valendo para todos (compatível)", () => {
+    const f = analyze(
+      snapshot(twoContainers(false), [event("Unhealthy", "Readiness probe failed: x", 2)]),
+    );
+    expect(f.filter((x) => x.id === "readiness-failing")).toHaveLength(2);
+  });
+});
+
+describe("containerOfFieldPath", () => {
+  test("extrai o nome do container do fieldPath do evento", () => {
+    expect(containerOfFieldPath("spec.containers{app}")).toBe("app");
+    expect(containerOfFieldPath("spec.initContainers{wait-db}")).toBe("wait-db");
+    expect(containerOfFieldPath(undefined)).toBeUndefined();
+    expect(containerOfFieldPath("metadata.name")).toBeUndefined();
   });
 });
