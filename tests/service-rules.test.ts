@@ -102,6 +102,23 @@ describe("endpoints", () => {
     expect(find(f, "svc-partial-endpoints")?.severity).toBe("warn");
   });
 
+  test("dual-stack (slice IPv4 + IPv6 por pod) não esconde réplica fora do balanceamento", () => {
+    const familySlice = (addressType: string, address: string): EndpointSlice => ({
+      metadata: { name: `api-${addressType}`, namespace: "apps" },
+      addressType,
+      endpoints: [
+        { addresses: [address], conditions: { ready: true }, targetRef: { kind: "Pod", name: "api-1" } },
+      ],
+    });
+    const f = analyzeService(
+      snap({
+        pods: [backendPod("api-1"), backendPod("api-2")],
+        endpointSlices: [familySlice("IPv4", "10.42.0.1"), familySlice("IPv6", "fd00::1")],
+      }),
+    );
+    expect(find(f, "svc-partial-endpoints")?.title).toBe("Só 1 de 2 pod(s) estão no balanceamento");
+  });
+
   test("service sem selector e sem endpoint manual é crítico", () => {
     const f = analyzeService(snap({ service: service({ selector: {} }) }));
     expect(find(f, "svc-no-selector")?.severity).toBe("critical");
@@ -285,6 +302,16 @@ describe("helpers", () => {
       ],
     };
     expect(readyAddresses([mixed, slice(2)])).toBe(3);
+  });
+
+  test("readyAddresses conta o mesmo pod uma vez mesmo repetido entre slices", () => {
+    const withPod = (name: string, addresses: string[]): EndpointSlice => ({
+      metadata: { name, namespace: "apps" },
+      endpoints: [{ addresses, conditions: { ready: true }, targetRef: { kind: "Pod", name: "api-1" } }],
+    });
+    // Durante atualização o mesmo endpoint pode aparecer em duas slices (doc do EndpointSlice).
+    expect(readyAddresses([withPod("a", ["10.0.0.1"]), withPod("b", ["10.0.0.1"])])).toBe(1);
+    expect(readyAddresses([withPod("v4", ["10.0.0.1"]), withPod("v6", ["fd00::1"])])).toBe(1);
   });
 
   test("nearMisses ordena por quantidade de labels que batem", () => {

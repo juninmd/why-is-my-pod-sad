@@ -24,17 +24,20 @@ const isReady = (pod: Pod) =>
   (pod.status.containerStatuses ?? []).length > 0 &&
   (pod.status.containerStatuses ?? []).every((s) => s.ready);
 
-/** Endereços prontos somando todas as EndpointSlices do Service. */
+/**
+ * Endpoints prontos somando todas as EndpointSlices do Service, cada um contado uma vez:
+ * dual-stack tem uma slice por família e, durante updates, o mesmo endpoint pode aparecer em duas.
+ */
 export function readyAddresses(slices: EndpointSlice[]): number {
-  return slices.reduce(
-    (total, slice) =>
-      total +
-      (slice.endpoints ?? []).reduce(
-        (n, e) => n + (e.conditions?.ready === false ? 0 : (e.addresses ?? []).length),
-        0,
-      ),
-    0,
-  );
+  const ready = new Set<string>();
+  for (const slice of slices) {
+    for (const e of slice.endpoints ?? []) {
+      if (e.conditions?.ready === false || !(e.addresses ?? []).length) continue;
+      const ref = e.targetRef?.name ? `${e.targetRef.kind ?? ""}/${e.targetRef.name}` : undefined;
+      ready.add(ref ?? `addr:${(e.addresses ?? [])[0]}`);
+    }
+  }
+  return ready.size;
 }
 
 /** targetPort ausente vale como igual à port — é a regra do Kubernetes e a origem de metade dos bugs. */
