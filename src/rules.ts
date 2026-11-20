@@ -40,6 +40,12 @@ const specOf = (pod: Pod, name: string) =>
 const eventsMatching = (events: EventLite[], reason: RegExp) =>
   events.filter((e) => reason.test(e.reason ?? ""));
 
+/** Pull events of this container: "Failed"/"BackOff" also name crash back-offs, mounts and scheduling. */
+const pullEvents = (events: EventLite[], container: string) =>
+  eventsMatching(events, /^(Failed|BackOff)$/).filter(
+    (e) => /image/i.test(e.message ?? "") && (e.container === undefined || e.container === container),
+  );
+
 const eventText = (e: EventLite) =>
   `${e.reason ?? "?"}${e.count && e.count > 1 ? ` (x${e.count})` : ""}: ${(e.message ?? "").trim()}`;
 
@@ -171,9 +177,7 @@ export function analyze(snap: PodSnapshot): Finding[] {
         title: `${label} não consegue baixar a imagem (${reason})`,
         detail: `imagem: ${image}`,
         hint,
-        evidence: [msg, ...eventsMatching(events, /Failed|BackOff/).slice(-2).map(eventText)].filter(
-          Boolean,
-        ),
+        evidence: [msg, ...pullEvents(events, st.name).slice(-2).map(eventText)].filter(Boolean),
       });
     }
 

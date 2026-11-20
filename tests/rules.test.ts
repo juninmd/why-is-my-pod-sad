@@ -128,6 +128,36 @@ describe("imagem", () => {
     expect(find(f, "image-pull")?.hint).toContain("não existe no registry");
   });
 
+  test("evidência do pull mostra só eventos de imagem do próprio container", () => {
+    const f = analyze(
+      snapshot(
+        pod({
+          containers: [
+            { name: "app", image: "app:1" },
+            { name: "sidecar", image: "ghcr.io/x/sidecar:9" },
+          ],
+          statuses: [
+            { name: "app", ready: false, restartCount: 6, state: { waiting: { reason: "CrashLoopBackOff" } } },
+            {
+              name: "sidecar",
+              ready: false,
+              state: { waiting: { reason: "ImagePullBackOff", message: "manifest unknown" } },
+            },
+          ],
+        }),
+        [
+          { ...event("BackOff", "Back-off pulling image \"ghcr.io/x/sidecar:9\"", 4), container: "sidecar" },
+          { ...event("BackOff", "Back-off restarting failed container app in pod x", 12), container: "app" },
+          event("FailedMount", "MountVolume.SetUp failed for volume \"cfg\""),
+        ],
+      ),
+    );
+    expect(find(f, "image-pull")?.evidence).toEqual([
+      "manifest unknown",
+      'BackOff (x4): Back-off pulling image "ghcr.io/x/sidecar:9"',
+    ]);
+  });
+
   test("InvalidImageName is reported once, as image-pull", () => {
     const f = analyze(
       snapshot(
