@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { containerOfFieldPath } from "../src/collect.ts";
+import { containerOfFieldPath, eventFieldSelector } from "../src/collect.ts";
 import { analyze } from "../src/rules.ts";
 import type { EventLite, Finding } from "../src/types.ts";
 import { event, ids, pod, snapshot } from "./helpers.ts";
@@ -440,5 +440,19 @@ describe("containerOfFieldPath", () => {
     expect(containerOfFieldPath("spec.initContainers{wait-db}")).toBe("wait-db");
     expect(containerOfFieldPath(undefined)).toBeUndefined();
     expect(containerOfFieldPath("metadata.name")).toBeUndefined();
+  });
+});
+
+describe("eventFieldSelector", () => {
+  const base = { spec: { containers: [] }, status: {} };
+
+  test("filtra pelo uid: pod de StatefulSet recriado com o mesmo nome não herda eventos do anterior", () => {
+    const pod = { ...base, metadata: { name: "web-0", namespace: "apps", uid: "abc-123" } };
+    expect(eventFieldSelector(pod)).toBe("involvedObject.name=web-0,involvedObject.uid=abc-123");
+  });
+
+  test("sem uid (pod montado à mão) cai só no nome", () => {
+    const pod = { ...base, metadata: { name: "web-0", namespace: "apps" } };
+    expect(eventFieldSelector(pod)).toBe("involvedObject.name=web-0");
   });
 });

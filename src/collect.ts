@@ -98,16 +98,18 @@ export async function resolvePod(
   return winner;
 }
 
-async function fetchEvents(podName: string, t: Target): Promise<EventLite[]> {
+/**
+ * Events of this pod instance. Name alone also matches a previous pod with the same name
+ * (StatefulSet, recreated pod), whose events linger for an hour — the uid tells them apart.
+ */
+export const eventFieldSelector = (pod: Pod): string =>
+  [`involvedObject.name=${pod.metadata.name}`, pod.metadata.uid && `involvedObject.uid=${pod.metadata.uid}`]
+    .filter(Boolean)
+    .join(",");
+
+async function fetchEvents(pod: Pod, t: Target): Promise<EventLite[]> {
   const raw = await kubectlSoft(
-    [
-      "get",
-      "events",
-      "--field-selector",
-      `involvedObject.name=${podName}`,
-      "-o",
-      "json",
-    ],
+    ["get", "events", "--field-selector", eventFieldSelector(pod), "-o", "json"],
     t,
   );
   if (!raw) return [];
@@ -162,7 +164,7 @@ export async function collect(
 ): Promise<PodSnapshot> {
   const scoped: Target = { ...t, namespace: pod.metadata.namespace };
   const [events, logs] = await Promise.all([
-    fetchEvents(pod.metadata.name, scoped),
+    fetchEvents(pod, scoped),
     opts.logs ? fetchLogs(pod, scoped, opts.tail) : Promise.resolve({}),
   ]);
   return { pod, events, logs };
