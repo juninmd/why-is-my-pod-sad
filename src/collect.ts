@@ -32,8 +32,8 @@ export function sadness(pod: Pod): number {
     ...(pod.status.initContainerStatuses ?? []),
     ...(pod.status.containerStatuses ?? []),
   ];
-  const waiting = statuses.find((s) => s.state?.waiting?.reason);
-  if (waiting && waiting.state?.waiting?.reason !== "ContainerCreating") return 70;
+  // Any container counts: a sibling still in ContainerCreating must not hide a CrashLoopBackOff.
+  if (statuses.some((s) => (s.state?.waiting?.reason ?? "ContainerCreating") !== "ContainerCreating")) return 70;
   if (phase === "Failed") return 60;
   if (statuses.some((s) => s.ready === false) && phase === "Running") return 50;
   const restarts = Math.max(0, ...statuses.map((s) => s.restartCount ?? 0));
