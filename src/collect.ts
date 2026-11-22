@@ -1,4 +1,4 @@
-import { kubectlJson, kubectlSoft, type Target } from "./kubectl.ts";
+import { kubectlJson, kubectlTry, type Target } from "./kubectl.ts";
 import type { ContainerLogs, EventLite, Pod, PodSnapshot } from "./types.ts";
 
 interface PodList {
@@ -107,15 +107,21 @@ export const eventFieldSelector = (pod: Pod): string =>
     .filter(Boolean)
     .join(",");
 
-async function fetchEvents(pod: Pod, t: Target): Promise<EventLite[]> {
-  const raw = await kubectlSoft(
+/** Access or connectivity failures; a container that has not started yet is not one of them. */
+const ACCESS_FAILURE = /forbidden|unauthorized|demorou mais|timeout|unable to connect|connection refused/i;
+
+async function fetchEvents(pod: Pod, t: Target, unavailable: string[]): Promise<EventLite[]> {
+  const res = await kubectlTry(
     ["get", "events", "--field-selector", eventFieldSelector(pod), "-o", "json"],
     t,
   );
-  if (!raw) return [];
+  if ("error" in res) {
+    unavailable.push(`eventos: ${res.error}`);
+    return [];
+  }
   let list: EventList;
   try {
-    list = JSON.parse(raw) as EventList;
+    list = JSON.parse(res.out) as EventList;
   } catch {
     return [];
   }
@@ -136,6 +142,7 @@ async function fetchLogs(
   pod: Pod,
   t: Target,
   tailLines: number,
+  unavailable: string[],
 ): Promise<Record<string, ContainerLogs>> {
   const names = [
     ...(pod.spec.initContainers ?? []),
@@ -145,13 +152,16 @@ async function fetchLogs(
   const entries = await Promise.all(
     names.map(async (name) => {
       const [current, previous] = await Promise.all([
-        kubectlSoft(["logs", pod.metadata.name, "-c", name, `--tail=${tailLines}`], t),
-        kubectlSoft(
+        kubectlTry(["logs", pod.metadata.name, "-c", name, `--tail=${tailLines}`], t),
+        kubectlTry(
           ["logs", pod.metadata.name, "-c", name, "--previous", `--tail=${tailLines}`],
           t,
         ),
       ]);
-      return [name, { current: current ?? undefined, previous: previous ?? undefined }] as const;
+      const denied = [current, previous].find((r) => "error" in r && ACCESS_FAILURE.test(r.error));
+      if (denied && "error" in denied) unavailable.push(`logs de ${name}: ${denied.error}`);
+      const out = (r: { out: string } | { error: string }) => ("out" in r ? r.out : undefined);
+      return [name, { current: out(current), previous: out(previous) }] as const;
     }),
   );
   return Object.fromEntries(entries);
@@ -163,9 +173,10 @@ export async function collect(
   opts: { tail: number; logs: boolean },
 ): Promise<PodSnapshot> {
   const scoped: Target = { ...t, namespace: pod.metadata.namespace };
+  const unavailable: string[] = [];
   const [events, logs] = await Promise.all([
-    fetchEvents(pod, scoped),
-    opts.logs ? fetchLogs(pod, scoped, opts.tail) : Promise.resolve({}),
+    fetchEvents(pod, scoped, unavailable),
+    opts.logs ? fetchLogs(pod, scoped, opts.tail, unavailable) : Promise.resolve({}),
   ]);
-  return { pod, events, logs };
+  return { pod, events, logs, ...(unavailable.length ? { unavailable } : {}) };
 }
