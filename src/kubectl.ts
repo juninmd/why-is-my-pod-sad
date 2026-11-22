@@ -60,13 +60,23 @@ export async function kubectlJson<T>(args: string[], t: Target = {}): Promise<T>
   return JSON.parse(await kubectl([...args, "-o", "json"], t)) as T;
 }
 
+/** Same as kubectl(), but returns the failure reason instead of throwing (for optional data). */
+export async function kubectlTry(
+  args: string[],
+  t: Target = {},
+): Promise<{ out: string } | { error: string }> {
+  try {
+    return { out: await kubectl(args, t) };
+  } catch (e) {
+    const err = e as KubectlError;
+    return { error: (err.stderr || err.message).split("\n")[0] || err.message };
+  }
+}
+
 /** Same as kubectl(), but returns null instead of throwing (for optional data). */
 export async function kubectlSoft(args: string[], t: Target = {}): Promise<string | null> {
-  try {
-    return await kubectl(args, t);
-  } catch {
-    return null;
-  }
+  const r = await kubectlTry(args, t);
+  return "out" in r ? r.out : null;
 }
 
 export async function currentNamespace(context?: string): Promise<string> {

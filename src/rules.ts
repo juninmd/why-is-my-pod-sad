@@ -366,6 +366,18 @@ export function analyze(snap: PodSnapshot): Finding[] {
     });
   }
 
+  // ---- 6b. Dados que o kubectl não leu ----------------------------------
+  // Sem isso, "nenhum evento problemático" seria afirmado sobre eventos que nem foram lidos.
+  if (snap.unavailable?.length) {
+    push({
+      id: "data-unavailable",
+      severity: "warn",
+      title: "Diagnóstico incompleto: o kubectl não leu eventos ou logs",
+      detail: snap.unavailable.join("; "),
+      hint: "Um problema pode estar escondido aí. Confira `kubectl auth can-i get events` e `kubectl auth can-i get pods/log`, e a conexão com o cluster.",
+    });
+  }
+
   // ---- 7. Nada encontrado -----------------------------------------------
   if (!found.length) {
     const ready = statuses.every((s) => s.ready !== false);

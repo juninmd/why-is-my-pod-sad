@@ -99,6 +99,8 @@ export interface PodSnapshot {
   pod: Pod;
   events: EventLite[];
   logs: Record<string, ContainerLogs>;
+  /** Events/logs kubectl could not read (RBAC, timeout): their absence is not evidence. */
+  unavailable?: string[];
 }
 
 export type Severity = "critical" | "warn" | "info";
